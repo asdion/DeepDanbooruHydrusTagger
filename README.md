@@ -1,11 +1,19 @@
 --hydrusIP<={127.0.0.1} 
+
 --hydrusPort<={45869} 
+
 --hydrusAPIKey<={API Key}
+
 --deepDanBooruWorkingDir<="{C:\DeepDanbooru}" #Path to DeepDanbooru folder
+
 --deepDanBooruEXEPathWithinWorkingDir<="{venv\Scripts\deepdanbooru.exe}" #path to exe relative to the working directory 
+
 --deepDanBooruProjectDirWithinWorkingDir<="{deepdanbooru\project}" #path to the projectfolder 
+
 --tempImageFolder<="{tmpImageFolder}" #path to the temporary image folder 
+
 --hydrusFilterTags<="{\"-special:taggedbydeepdanbooru\",\"system:filetype_=_image/jpg,_image/jpeg,_image/png,_apng\",\"system:limit=3\"}" #Filter to be passed through to Hydrus, System:limit defines the batch size 
+
 --hydrusTagServiceName<="{my tags}" #Name of the Tagging service within Hydrus
 
 A tag will be added called "special:taggedbydeepdanbooru" to enable simple perpetual batch processing.
