@@ -1,5 +1,8 @@
 package application;
 
+import java.io.IOException;
+import java.nio.file.Files;
+import java.nio.file.Paths;
 import java.util.HashMap;
 import java.util.Scanner;
 
@@ -20,7 +23,7 @@ public class Main
 		arguments.put("--tempImageFolder", "tmpImageFolder");
 		arguments.put("--hydrusTagServiceName", "my tags");
 
-		if (args.length == 9)
+		if (args.length == 10)
 		{
 			for (String arg : args)
 			{
@@ -54,6 +57,9 @@ public class Main
 					case "--hydrusTagServiceName":
 						arguments.put(argument[0], argument[1]);
 						break;
+					case "--clear":
+						arguments.put(argument[0], argument[1]);
+						break;
 				}
 			}
 
@@ -69,13 +75,30 @@ public class Main
 			Scanner s = new Scanner(System.in);
 			while (loop)
 			{
-				ha.clearTemporaryImageFolder();
-				ha.getImageIDS();
-				ha.loadImages();
+				if (arguments.get("--clear").equals("true"))
+				{
+					ha.clearTemporaryImageFolder();
+					ha.getImageIDS();
+					ha.loadImages();
+				}
 				ha.commitTags(ddbt.evaluate());
-
-				System.out.println("Enter X to end the process:");
-				if (s.nextLine().toLowerCase().equals("x"))
+				long count = 0;
+				try
+				{
+					count = Files.walk(Paths.get(arguments.get("--tempImageFolder"))).filter(Files::isRegularFile).count();
+				}
+				catch (IOException e)
+				{
+					e.printStackTrace();
+				}
+				
+				System.out.println("Enter X to evaluate after failure");
+				if (count > 2 || s.nextLine().toLowerCase().equals("x"))
+				{
+					loop = true;
+					arguments.put("--clear", "false");
+				}
+				else
 				{
 					loop = false;
 				}

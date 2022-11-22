@@ -11,6 +11,7 @@ import java.net.URL;
 import java.nio.file.Files;
 import java.nio.file.Paths;
 import java.nio.file.StandardCopyOption;
+import java.time.Instant;
 import java.util.ArrayList;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
@@ -30,6 +31,7 @@ public class HydrusAccess
 	private String imageFolderPath;
 	private String tagServiceName;
 	private String hydrusAPIKey;
+	private String potentialErrorHash;
 
 	private ArrayList<String> imageIDs;
 
@@ -43,6 +45,7 @@ public class HydrusAccess
 		imageFolderPath = tempImageFolderPath;
 		tagServiceName = hydrusTagServiceName;
 		this.hydrusAPIKey = hydrusAPIKey;
+		potentialErrorHash = "";
 	}
 
 	public void getImageIDS()
@@ -53,8 +56,8 @@ public class HydrusAccess
 			url = new URL(urlElement0_IP + urlElement1_SearchFiles + urlElement2_APIKey + urlElement3_Tags);
 			HttpURLConnection conn = (HttpURLConnection) url.openConnection();
 			conn.setRequestMethod("GET");
-			conn.setConnectTimeout(10000);// 10000 milliseconds = 10 seconds
-			conn.setReadTimeout(10000);
+			conn.setConnectTimeout(100000);// 10000 milliseconds = 10 seconds
+			conn.setReadTimeout(100000);
 			BufferedReader reader = new BufferedReader(new InputStreamReader(conn.getInputStream()));
 			String line;
 			while ((line = reader.readLine()) != null)
@@ -90,8 +93,8 @@ public class HydrusAccess
 						+ urlElement2_GetMetadataLimit);
 				HttpURLConnection conn = (HttpURLConnection) url.openConnection();
 				conn.setRequestMethod("GET");
-				conn.setConnectTimeout(10000);// 10000 milliseconds = 10 seconds
-				conn.setReadTimeout(10000);
+				conn.setConnectTimeout(100000);// 10000 milliseconds = 10 seconds
+				conn.setReadTimeout(100000);
 				BufferedReader reader = new BufferedReader(new InputStreamReader(conn.getInputStream()));
 				String line;
 				while ((line = reader.readLine()) != null)
@@ -154,9 +157,11 @@ public class HydrusAccess
 		ArrayList<ImageTags> imagesTags = new ArrayList<ImageTags>();
 		Pattern patternTag = Pattern.compile("^\\(\\d\\.\\d*\\).*", Pattern.CASE_INSENSITIVE);
 		ImageTags tempImageTags = null;
+		Boolean errorDetected = false;
 
 		for (String evaluationResult : evaluationResults)
 		{
+			errorDetected = true;
 			Matcher matcherTag = patternTag.matcher(evaluationResult);
 			boolean matchFoundTag = matcherTag.find();
 
@@ -180,13 +185,22 @@ public class HydrusAccess
 			{
 				String[] tag = evaluationResult.split(" ", 2);
 				tempImageTags.addTag(tag[1].replace("_", " "));
+				errorDetected = false;
 			}
+		}
+		if (errorDetected)
+		{
+			System.out.println("-Potential Error Detected-");
+			System.out.println(tempImageTags.getHash());
+			potentialErrorHash = tempImageTags.getHash();
+			System.out.println("---------------------------");
 		}
 		pushTagsToHydrus(imagesTags);
 	}
 
 	private void pushTagsToHydrus(ArrayList<ImageTags> imagesTags)
 	{
+		Instant timerSubmission = Instant.now();
 		for (ImageTags imageTags : imagesTags)
 		{
 			String urlStr = urlElement0_IP + "add_tags/add_tags";
@@ -198,7 +212,11 @@ public class HydrusAccess
 			String jsonStrPart6Tags = "";
 			
 			ArrayList<String> tags = imageTags.getTags();
-			
+
+			if (tags.size() <= 1)
+			{
+				continue;
+			}
 			for (int i = 0; i < tags.size(); i++)
 			{
 				if (i == 0)
@@ -240,13 +258,43 @@ public class HydrusAccess
 						response.append(responseLine.trim());
 					}
 					br.close();
-					System.out.println(jsonStrPart2Hash + " Tags were Sent. | " + response.toString());
+					System.out.println(jsonStrPart2Hash + " Tags were Sent. | " + response.toString());				
 				}
 			}
 			catch (IOException e)
 			{
 				e.printStackTrace();
 			}
+			finally 
+			{
+				File tempImageDir = new File(imageFolderPath);
+				for (File file : tempImageDir.listFiles())
+				{
+					if (!file.isDirectory() && file.getName().contains(imageTags.getHash()))
+					{
+						file.delete();
+						break;
+					}
+				}
+				if (!potentialErrorHash.equals(""))
+				{
+					for (File file : tempImageDir.listFiles())
+					{
+						if (!file.isDirectory() && file.getName().contains(potentialErrorHash))
+						{
+							file.delete();
+							potentialErrorHash = "";
+							break;
+						}
+					}
+				}
+			}
+			Long seconds = ((Instant.now().toEpochMilli() - timerSubmission.toEpochMilli()) / 1000L);
+			Long minutes = seconds / 60;
+			Long hours = minutes / 60;
+			seconds = seconds % 60;
+			minutes = minutes % 60;
+			System.out.println("==== Total Submission Time: " + hours + "h " + minutes + "min " + seconds + "sec \n");
 		}
 	}
 }

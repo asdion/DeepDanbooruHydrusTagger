@@ -16,6 +16,8 @@
 
 --hydrusTagServiceName<="{my tags}" #Name of the Tagging service within Hydrus
 
+--clear<={true} #to force clear of image folder and download new set at startup
+
 A tag will be added called "special:taggedbydeepdanbooru" to enable simple perpetual batch processing.
 If there is a wish for a different tag it can be changed within "ImageTags.java"
 
